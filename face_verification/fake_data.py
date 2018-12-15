@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 slim = tf.contrib.slim
+
+
 # # show image
 # filename = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/0000100/001.jpg'
 #
@@ -235,43 +237,42 @@ def float_feature(values):
 #     return raw_image, label
 
 
-
-#==================================Write==============================================
-# tf.enable_eager_execution()
-cat_in_snow = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/0000045/001.jpg'
-williamsburg_bridge = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/0000045/002.jpg'
-
-
-image_labels = {
-    cat_in_snow: 0,
-    williamsburg_bridge: 1,
-}
-image_string = open(cat_in_snow, 'rb').read()
-label = image_labels[cat_in_snow]
-
-
-def image_example(image_string, label):
-    # image_shape = tf.image.decode_jpeg(image_string).shape
-    feature = {
-      # 'height': int64_feature(image_shape[0]),
-      # 'width': int64_feature(image_shape[1]),
-      # 'depth': int64_feature(image_shape[2]),
-      'label': int64_feature(label),
-      'image_raw': bytes_feature(image_string),
-    }
-    return tf.train.Example(features=tf.train.Features(feature=feature))
+# ==================================Write==============================================
+# # tf.enable_eager_execution()
+# cat_in_snow = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/0000045/001.jpg'
+# williamsburg_bridge = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/0000045/002.jpg'
 #
-# for line in str(image_example(image_string, label)).split('\n')[:15]:
-#     print(line)
+#
+# image_labels = {
+#     cat_in_snow: 0,
+#     williamsburg_bridge: 1,
+# }
+# image_string = open(cat_in_snow, 'rb').read()
+# label = image_labels[cat_in_snow]
+#
+#
+# def image_example(image_string, label):
+#     # image_shape = tf.image.decode_jpeg(image_string).shape
+#     feature = {
+#       # 'height': int64_feature(image_shape[0]),
+#       # 'width': int64_feature(image_shape[1]),
+#       # 'depth': int64_feature(image_shape[2]),
+#       'label': int64_feature(label),
+#       'image_raw': bytes_feature(image_string),
+#     }
+#     return tf.train.Example(features=tf.train.Features(feature=feature))
+# #
+# # for line in str(image_example(image_string, label)).split('\n')[:15]:
+# #     print(line)
+#
+# with tf.python_io.TFRecordWriter('images.tfrecords') as writer:
+#   for filename, label in image_labels.items():
+#     image_string = open(filename, 'rb').read()
+#     # print(image_string)
+#     tf_example = image_example(image_string, label)
+#     writer.write(tf_example.SerializeToString())
 
-with tf.python_io.TFRecordWriter('images.tfrecords') as writer:
-  for filename, label in image_labels.items():
-    image_string = open(filename, 'rb').read()
-    # print(image_string)
-    tf_example = image_example(image_string, label)
-    writer.write(tf_example.SerializeToString())
-
-#=======================================Read====================================
+# =======================================Read====================================
 raw_image_dataset = tf.data.TFRecordDataset('images.tfrecords')
 # Create a dictionary describing the features.
 image_feature_description = {
@@ -281,12 +282,16 @@ image_feature_description = {
     'label': tf.FixedLenFeature([], tf.int64),
     'image_raw': tf.FixedLenFeature([], tf.string),
 }
+
+
 def _parse_image_function(example_proto):
-  # Parse the input tf.Example proto using the dictionary above.
-  return tf.parse_single_example(example_proto, image_feature_description)
+    # Parse the input tf.Example proto using the dictionary above.
+    return tf.parse_single_example(example_proto, image_feature_description)
+
+
 parsed_image_dataset = raw_image_dataset.map(_parse_image_function)
 
-#=======================================Recover==================================
+# =======================================Recover==================================
 
 # for image_features in parsed_image_dataset:
 #     image_raw = image_features['image_raw'].numpy()
@@ -296,6 +301,7 @@ parsed_image_dataset = raw_image_dataset.map(_parse_image_function)
 #     plt.show()
 
 from hyperparams import Hyperparameters
+
 data_dir = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/'
 
 
@@ -317,7 +323,7 @@ def select_random_negative(data_dir, anchor_id, is_training_set):
     negative_img = negative_example_list[np.random.randint(len(negative_example_list))]
     negative_img = negative_path + negative_img
     img = Image.open(negative_img)
-    img = np.array(img.resize((299, 299))).astype(np.uint8)
+    img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
     return img
 
 
@@ -330,7 +336,7 @@ def select_all_positive(data_dir, anchor_id, anchor_img):
             continue
         positive_img = positive_path + positive_img
         img = Image.open(positive_img)
-        img = np.array(img.resize((299, 299))).astype(np.uint8)
+        img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
         all_positive.append(img)
         # image_string = open(positive_img, 'rb').read()
         # all_positive.append(image_string)
@@ -355,45 +361,50 @@ def pair_example(anchor_string, img_string, label):
 
 def get_image_string(img_path):
     img = Image.open(img_path)
-    img = np.array(img.resize((299, 299))).astype(np.uint8)
+    img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
     with tf.Session() as sess:
         img_string = sess.run(tf.image.encode_jpeg(img))
     return img_string
 
-#==========================Write=====================
-with tf.python_io.TFRecordWriter('images.tfrecords') as writer:
-    person_list = os.listdir(data_dir)
-    for i in range(1):
-        person_id = person_list[i]
-        person_path = data_dir + '/' + person_id + '/'
-        all_positive = []
-        anchor_list =  os.listdir(person_path)
-        for anchor_id in range(len(anchor_list)):
-            anchor_string = get_image_string(person_path + anchor_list[anchor_id])
-            # anchor_img =Image.open(person_path + anchor_list[anchor_id])
-            # anchor_img = np.array(anchor_img.resize((299,299))).astype(np.uint8)
-            # anchor_string = tf.image.encode_jpeg(anchor_img)
-            for img_id in range(anchor_id+1, len(anchor_list)):
-                img_string = get_image_string(person_path + anchor_list[img_id])
-                # img = Image.open(person_path + anchor_list[img_id])
-                # img = np.array(img.resize((299,299))).astype(np.uint8)
-                # img_string = tf.image.encode_jpeg(img)
-            tf_example = pair_example(anchor_string, img_string, 1)
-            writer.write(tf_example.SerializeToString())
+
+# ==========================Write=====================
+# with tf.python_io.TFRecordWriter('images.tfrecords') as writer:
+#     person_list = os.listdir(data_dir)
+#     for i in range(1):
+#         person_id = person_list[i]
+#         person_path = data_dir + '/' + person_id + '/'
+#         all_positive = []
+#         anchor_list =  os.listdir(person_path)
+#         for anchor_id in range(len(anchor_list)):
+#             anchor_string = get_image_string(person_path + anchor_list[anchor_id])
+#             # anchor_img =Image.open(person_path + anchor_list[anchor_id])
+#             # anchor_img = np.array(anchor_img.resize((299,299))).astype(np.uint8)
+#             # anchor_string = tf.image.encode_jpeg(anchor_img)
+#             for img_id in range(anchor_id+1, len(anchor_list)):
+#                 img_string = get_image_string(person_path + anchor_list[img_id])
+#                 # img = Image.open(person_path + anchor_list[img_id])
+#                 # img = np.array(img.resize((299,299))).astype(np.uint8)
+#                 # img_string = tf.image.encode_jpeg(img)
+#             tf_example = pair_example(anchor_string, img_string, 1)
+#             writer.write(tf_example.SerializeToString())
 
 
-#==========================Read=========================
-raw_pair_dataset = tf.data.TFRecordDataset('images.tfrecords')
-image_feature_description = {
-    'anchor_raw': tf.FixedLenFeature([], tf.string),
-    'img_raw': tf.FixedLenFeature([], tf.string),
-    'label': tf.FixedLenFeature([], tf.int64),
-}
-def _parse_pair_function(example_proto):
-  # Parse the input tf.Example proto using the dictionary above.
-  return tf.parse_single_example(example_proto, image_feature_description)
-parsed_pair_dataset = raw_pair_dataset.map(_parse_image_function)
-#=========================Retrive=======================
+# ==========================Read=========================
+# raw_pair_dataset = tf.data.TFRecordDataset('images.tfrecords')
+# image_feature_description = {
+#     'anchor_raw': tf.FixedLenFeature([], tf.string),
+#     'img_raw': tf.FixedLenFeature([], tf.string),
+#     'label': tf.FixedLenFeature([], tf.int64),
+# }
+#
+#
+# def _parse_pair_function(example_proto):
+#     # Parse the input tf.Example proto using the dictionary above.
+#     return tf.parse_single_example(example_proto, image_feature_description)
+#
+#
+# parsed_pair_dataset = raw_pair_dataset.map(_parse_image_function)
+# =========================Retrive=======================
 # for pair_features in parsed_pair_dataset:
 #     image_raw = pair_features['img_raw'].numpy()
 #     anchor_raw = pair_features['anchor_raw'].numpy()
@@ -405,44 +416,148 @@ parsed_pair_dataset = raw_pair_dataset.map(_parse_image_function)
 #     plt.figure()
 #     plt.imshow(anchor_raw)
 #     plt.show()
-iterator = parsed_pair_dataset.make_one_shot_iterator()
-next_element = iterator.get_next()
-with tf.Session() as sess:
-    for i in range(3):
-        pair = next_element
-        anchor_raw = pair['anchor_raw']
-        img_raw = pair['img_raw']
-        label = pair['label']
-        anchor = tf.image.decode_jpeg(anchor_raw)
-        img = tf.image.decode_jpeg(img_raw)
-        anchor, img, label = sess.run([anchor, img, label])
-        plt.imshow(anchor)
-        plt.figure()
-        plt.imshow(img)
-        plt.show()
-        print('label:{}'.format(label))
+# ===============not eager================================
+# iterator = parsed_pair_dataset.make_one_shot_iterator()
+# next_element = iterator.get_next()
+# with tf.Session() as sess:
+#     for i in range(3):
+#         pair = next_element
+#         anchor_raw = pair['anchor_raw']
+#         img_raw = pair['img_raw']
+#         label = pair['label']
+#         anchor = tf.image.decode_jpeg(anchor_raw)
+#         img = tf.image.decode_jpeg(img_raw)
+#         anchor, img, label = sess.run([anchor, img, label])
+#         plt.imshow(anchor)
+#         plt.figure()
+#         plt.imshow(img)
+#         plt.show()
+#         print('label:{}'.format(label))
+#
+#
+
+train_pair_num = 0
+train_file_offset = 0
+validation_file_offset = 0
+validation_pair_num = 0
+train_filename = Hyperparameters.train_filename
+validation_filename = Hyperparameters.validation_filename
 
 
+def write_to_tfrecord(data_dir, train_rate,
+                      train_file_offset=train_file_offset,
+                      validation_file_offset=validation_file_offset,
+                      train_pair_num=train_pair_num,
+                      validation_pair_num=validation_pair_num):
+    person_list = os.listdir(data_dir)
+    train_person_num = int(train_rate * len(person_list))
+    # write train_file
+    for i in range(train_person_num):
+        print('write {}th person\'s face into tf_record. Total: {}'.format(i, train_person_num))
+        if i % 300 == 0:
+            writer = tf.python_io.TFRecordWriter(train_filename + '_' + str(train_file_offset) + '.tfrecord')
+            train_file_offset = train_file_offset + 1
+        person_id = person_list[i]
+        person_path = data_dir + '/' + person_id + '/'
+        positive_num = 0
+        anchor_list = os.listdir(person_path)
+        for anchor_id in range(len(anchor_list)):
+            anchor_string = get_image_string(person_path + anchor_list[anchor_id])
+            # search all positive
+            for img_id in range(anchor_id + 1, len(anchor_list)):
+                img_string = get_image_string(person_path + anchor_list[img_id])
+                tf_example = pair_example(anchor_string, img_string, 1)
+                positive_num = positive_num + 1
+                train_pair_num = train_pair_num + 1
+                writer.write(tf_example.SerializeToString())
+            # select same num of negative
+            for num in range(positive_num):
+                negative_img = select_random_negative(data_dir=data_dir,
+                                                      anchor_id=anchor_list[anchor_id],
+                                                      is_training_set=True)
+                with tf.Session() as sess:
+                    negative_string = sess.run(tf.image.encode_jpeg(negative_img))
+                tf_example = pair_example(anchor_string, negative_string, 0)
+                train_pair_num = train_pair_num + 1
+                writer.write(tf_example.SerializeToString())
+    # write validation file
+    for i in range(train_person_num, len(person_list)):
+        print('write {}th person\'s face into tf_record. Total: {}'.format(i, len(person_list)-train_person_num))
+        if i % 300 == 0:
+            writer = tf.python_io.TFRecordWriter(
+                validation_filename + '_' + str(validation_file_offsetoffset) + '.tfrecord')
+            validation_file_offset = validation_file_offset + 1
+        person_id = person_list[i]
+        person_path = data_dir + '/' + person_id + '/'
+        positive_num = 0
+        anchor_list = os.listdir(person_path)
+        for anchor_id in range(len(anchor_list)):
+            anchor_string = get_image_string(person_path + anchor_list[anchor_id])
+            # search all positive
+            for img_id in range(anchor_id + 1, len(anchor_list)):
+                img_string = get_image_string(person_path + anchor_list[img_id])
+                tf_example = pair_example(anchor_string, img_string, 1)
+                positive_num = positive_num + 1
+                validation_pair_num = validation_pair_num + 1
+                writer.write(tf_example.SerializeToString())
+            # select same num of negative
+            for num in range(positive_num):
+                negative_img = select_random_negative(data_dir=data_dir,
+                                                      anchor_id=anchor_list[anchor_id],
+                                                      is_training_set=False)
+                with tf.Session() as sess:
+                    negative_string = sess.run(tf.image.encode_jpeg(negative_img))
+                tf_example = pair_example(anchor_string, negative_string, 0)
+                validation_pair_num = validation_pair_num + 1
+                writer.write(tf_example.SerializeToString())
+
+    return train_pair_num, validation_pair_num,
 
 
-# person_list = os.listdir(data_dir)
-# anchor = person_list[1]
-# anchor_img = os.listdir(data_dir + '/' + anchor + '/')[0]
-# all_positive = select_all_positive(data_dir, anchor_id=anchor, anchor_img=anchor_img)
-# for image_string in all_positive:
-#     image_string = tf.image.encode_jpeg(image_string)
-#     image_string = tf.image.decode_jpeg(image_string)
-#     plt.imshow(image_string)
-#     plt.show()
-select_random_negative(data_dir, anchor_id=anchor, is_training_set=True)
+train_pair_num, validation_pair_num = write_to_tfrecord(data_dir=data_dir,
+                                                        train_rate=Hyperparameters.split_train_rate,
+                                                        train_file_offset=train_file_offset,
+                                                        validation_file_offset=validation_file_offset,
+                                                        train_pair_num=train_pair_num,
+                                                        validation_pair_num=validation_pair_num)
+
+print('Finished.')
+print('train_pair_num: {} \nvalidation_pair_num: {}'.format(train_pair_num, validation_pair_num))
+
+
+# write training_tfrecord
+#         offset = 0
+#         for class_id in range(3):
+#             tfrecord_writer = tf.python_io.TFRecordWriter(train_filename + '_' + str(offset) + '.tfrecord')
+#             # offset = offset + 1
+#             print(class_id)
+#             person_dir = data_dir + '/' + person_list[class_id] + '/'
+#             for face_id in os.listdir(person_dir):
+#                 img_path = person_dir + face_id
+#                 img = Image.open(img_path)
+#                 img = img.resize((height, width))
+#                 img = np.array(img).astype(np.uint8)
+#                 with tf.Session() as sess:
+#                     jpg_string = sess.run(encoded_img,
+#                                           feed_dict={img_placeholder: img})
+#                 example = tf.train.Example(features=tf.train.Features(feature={
+#                     'image/encoded': bytes_feature(jpg_string),
+#                     'image/format': bytes_feature(b'jpg'),
+#                     'image/class/label': int64_feature(class_id),
+#                     # 'image/height': int64_feature(height),
+#                     # 'image/width': int64_feature(width)
+#                 }))
+#                 tfrecord_writer.write(example.SerializeToString())
+
+
 # if __name__ == '__main__':
-    # write_labels_txt(data_dir=data_dir, lables_filename=labels_filename)
-    # write_to_tfrecord(data_dir=data_dir,
-    #                   train_rate=train_rate,
-    #                   height=299,
-    #                   width=299)
-    # dataset = get_split('train', dataset_dir, file_pattern)
-    # raw_image, label = load_batch(dataset, 1, 299, 299)
-    # sess = tf.Session()
-    # print(sess.run(raw_image))
-    # print(get_split('train', dataset_dir=dataset_dir, file_pattern=file_pattern))
+# write_labels_txt(data_dir=data_dir, lables_filename=labels_filename)
+# write_to_tfrecord(data_dir=data_dir,
+#                   train_rate=train_rate,
+#                   height=299,
+#                   width=299)
+# dataset = get_split('train', dataset_dir, file_pattern)
+# raw_image, label = load_batch(dataset, 1, 299, 299)
+# sess = tf.Session()
+# print(sess.run(raw_image))
+# print(get_split('train', dataset_dir=dataset_dir, file_pattern=file_pattern))
