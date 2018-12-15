@@ -298,6 +298,7 @@ parsed_image_dataset = raw_image_dataset.map(_parse_image_function)
 from hyperparams import Hyperparameters
 data_dir = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/'
 
+
 def select_random_negative(data_dir, anchor_id, is_training_set):
     person_list = os.listdir(data_dir)
     # Select negative person_id
@@ -347,8 +348,9 @@ def pair_example(anchor_string, img_string, label):
     }
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
-for line in str(pair_example(image_string, image_string, 1)).split('\n')[:]:
-    print(line)
+
+# for line in str(pair_example(image_string, image_string, 1)).split('\n')[:]:
+#     print(line)
 
 
 def get_image_string(img_path):
@@ -392,31 +394,46 @@ def _parse_pair_function(example_proto):
   return tf.parse_single_example(example_proto, image_feature_description)
 parsed_pair_dataset = raw_pair_dataset.map(_parse_image_function)
 #=========================Retrive=======================
-for pair_features in parsed_pair_dataset:
-    image_raw = pair_features['image_raw'].numpy()
-    anchor_raw = pair_features['anchor_raw'].numpy()
-    image_raw = tf.image.decode_jpeg(image_raw)
-    anchor_raw = tf.image.decode_jpeg(anchor_raw)
-    plt.imshow(image_raw)
-    plt.figure()
-    plt.imshow(anchor_raw)
-    plt.show()
+# for pair_features in parsed_pair_dataset:
+#     image_raw = pair_features['img_raw'].numpy()
+#     anchor_raw = pair_features['anchor_raw'].numpy()
+#     image_raw = tf.image.decode_jpeg(image_raw)
+#     anchor_raw = tf.image.decode_jpeg(anchor_raw)
+#     label = pair_features['label']
+#     print("label:{}".format(label))
+#     plt.imshow(image_raw)
+#     plt.figure()
+#     plt.imshow(anchor_raw)
+#     plt.show()
 iterator = parsed_pair_dataset.make_one_shot_iterator()
-next_op = iterator.get_next()
+next_element = iterator.get_next()
 with tf.Session() as sess:
+    for i in range(3):
+        pair = next_element
+        anchor_raw = pair['anchor_raw']
+        img_raw = pair['img_raw']
+        label = pair['label']
+        anchor = tf.image.decode_jpeg(anchor_raw)
+        img = tf.image.decode_jpeg(img_raw)
+        anchor, img, label = sess.run([anchor, img, label])
+        plt.imshow(anchor)
+        plt.figure()
+        plt.imshow(img)
+        plt.show()
+        print('label:{}'.format(label))
 
 
 
 
-person_list = os.listdir(data_dir)
-anchor = person_list[1]
-anchor_img = os.listdir(data_dir + '/' + anchor + '/')[0]
-all_positive = select_all_positive(data_dir, anchor_id=anchor, anchor_img=anchor_img)
-for image_string in all_positive:
-    image_string = tf.image.encode_jpeg(image_string)
-    image_string = tf.image.decode_jpeg(image_string)
-    plt.imshow(image_string)
-    plt.show()
+# person_list = os.listdir(data_dir)
+# anchor = person_list[1]
+# anchor_img = os.listdir(data_dir + '/' + anchor + '/')[0]
+# all_positive = select_all_positive(data_dir, anchor_id=anchor, anchor_img=anchor_img)
+# for image_string in all_positive:
+#     image_string = tf.image.encode_jpeg(image_string)
+#     image_string = tf.image.decode_jpeg(image_string)
+#     plt.imshow(image_string)
+#     plt.show()
 select_random_negative(data_dir, anchor_id=anchor, is_training_set=True)
 # if __name__ == '__main__':
     # write_labels_txt(data_dir=data_dir, lables_filename=labels_filename)
