@@ -1,28 +1,9 @@
 import os
 import tensorflow as tf
+from hyperparams import Hyperparameters
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
 
-# # show image
-# filename = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/0000100/001.jpg'
-#
-# image_raw = tf.gfile.FastGFile(filename, 'rb').read()
-# img = tf.image.decode_jpeg(image_raw)
-# img_ = img
-# img = tf.expand_dims(img, 0)
-# img = tf.image.resize_nearest_neighbor(img, [299, 299])
-# img = tf.squeeze(img)
-#
-# with tf.Session() as sess:
-#     print(img.eval().shape)
-#     print(img.eval().dtype)
-#     print(img.eval())
-#     plt.figure(1)
-#     plt.imshow(img.eval())
-#     plt.figure(2)
-#     plt.imshow(img_.eval())
-#     plt.show()
 
 #==================================utils=============================
 def int64_feature(values):
@@ -65,114 +46,58 @@ def float_feature(values):
   return tf.train.Feature(float_list=tf.train.FloatList(value=values))
 
 
+file_pattern = 'face_%s_'
 
-train_rate = 0.8
-
-# cwd = os.getcwd()
-data_dir = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/'
-train_filename = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/face_train'
-test_filename = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/face_test'
-labels_filename = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/lables.txt'
-
-def write_to_tfrecord(data_dir=data_dir, train_rate=train_rate, height=299, width=299):
-    with tf.Graph().as_default():
-        img_placeholder = tf.placeholder(dtype=tf.uint8)
-        encoded_img = tf.image.encode_jpeg(img_placeholder)
-
-        person_list = os.listdir(data_dir)
-        person_num = len(person_list)
-        train_person_num = int(person_num * train_rate)
-        # write training_tfrecords
-        offset = 0
-        for class_id in range(train_person_num):
-            if(class_id % 1000 == 0):
-                tfrecord_writer = tf.python_io.TFRecordWriter(train_filename+'_'+str(offset)+'.tfrecord')
-                offset = offset + 1
-            print(class_id)
-            person_dir = data_dir + '/' + person_list[class_id] + '/'
-            for face_id in os.listdir(person_dir):
-                img_path = person_dir + face_id
-                img = Image.open(img_path)
-                img = img.resize((height, width))
-                img = np.array(img).astype(np.uint8)
-                with tf.Session() as sess:
-                    jpg_string = sess.run(encoded_img,
-                                          feed_dict={img_placeholder: img})
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'image/encoded': bytes_feature(jpg_string),
-                    'image/format': bytes_feature(b'jpg'),
-                    'image/class/label': int64_feature(class_id),
-                    # 'image/height': int64_feature(height),
-                    # 'image/width': int64_feature(width)
-                }))
-                tfrecord_writer.write(example.SerializeToString())
-        # Write testing_tfrecords
-        offset = 0
-        for class_id in range(train_person_num, person_num):
-            if (class_id % 1000 == 0):
-                tfrecord_writer = tf.python_io.TFRecordWriter(test_filename + '_' + str(offset) + '.tfrecord')
-                offset = offset + 1
-            print(class_id)
-            person_dir = data_dir + '/' + person_list[class_id] + '/'
-            print(person_dir)
-            print(class_id)
-            for face_id in os.listdir(person_dir):
-                img_path = person_dir + face_id
-                img = Image.open(img_path)
-                img = img.resize((height, width))
-                img = np.array(img).astype(np.uint8)
-                with tf.Session() as sess:
-                    jpg_string = sess.run(encoded_img,
-                                          feed_dict={img_placeholder: img})
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'image/encoded': bytes_feature(jpg_string),
-                    'image/format': bytes_feature(b'jpg'),
-                    'image/class/label': int64_feature(class_id),
-                    # 'image/height': int64_feature(height),
-                    # 'image/width': int64_feature(width)
-                }))
-                tfrecord_writer.write(example.SerializeToString())
+pair_feature_description = {
+    'anchor_raw': tf.FixedLenFeature([], tf.string),
+    'img_raw': tf.FixedLenFeature([], tf.string),
+    'label': tf.FixedLenFeature([], tf.int64),
+}
 
 
-def write_labels_txt(data_dir, lables_filename):
-    class_to_person_id = {}
-    person_list = os.listdir(data_dir)
-    person_num = len(person_list)
-    for class_id in range(person_num):
-        person_id = person_list[class_id]
-        class_to_person_id[class_id] = person_id
+def _parse_pair_function(example_proto):
+    parsed_pair = tf.parse_single_example(example_proto, pair_feature_description)
+    parsed_pair['anchor_raw'] = tf.image.decode_jpeg(parsed_pair['anchor_raw'])
+    parsed_pair['img_raw'] = tf.image.decode_jpeg(parsed_pair['img_raw'])
+    # parsed_pair['anchor_raw'] = tf.image.resize_nearest_neighbor(parsed_pair['anchor_raw'],
+    #                                                              [Hyperparameters.img_height, Hyperparameters.img_width])
+    parsed_pair['anchor_raw'] = tf.image.resize_images(parsed_pair['anchor_raw'],
+                                                       [Hyperparameters.img_height, Hyperparameters.img_width])
+    parsed_pair['img_raw'] = tf.image.resize_images(parsed_pair['img_raw'],
+                                                    [Hyperparameters.img_height, Hyperparameters.img_width])
+    return parsed_pair
 
-    f = open(labels_filename, 'w')
-    for class_id, person_id in class_to_person_id.items():
-        f.writelines(str(class_id)+':'+person_id+'\n')
-    f.close()
+def get_split(tfrecord_dir, file_pattern, split_name):
+    filenames = []
+    file_list = os.listdir(tfrecord_dir)
+    for file_name in file_list:
+        if split_name in file_name:
+            filenames.append(tfrecord_dir + file_name)
+    dataset = tf.data.TFRecordDataset(filenames)
+    dataset = dataset.map(_parse_pair_function, Hyperparameters.parallel_calls)
+    return dataset
 
-def read_and_decode(filename):
-    pass
-
-
+# Test
 if __name__ == '__main__':
-    write_labels_txt(data_dir=data_dir, lables_filename=labels_filename)
-    write_to_tfrecord(data_dir=data_dir,
-                      train_rate=train_rate,
-                      height=299,
-                      width=299)
-
-
-
-            # print(type(label))
-            # print(img.shape)
-            # print(type(img))
-            # plt.imshow(img)
-            # plt.show()
-
-
-
-# for person_id in os.listdir(data_dir):
-#     person_dir = data_dir + "/" + person_id + "/"
-#     person_face_num = len(os.listdir(person_dir))
-#     print(person_face_num)
-#     for face_id in os.listdir(person_dir):
-#         img_path = person_dir + face_id
-#         # img_row = tf.gfile.FastGFile(img_path, 'rb').read()
-
+    dataset = get_split(Hyperparameters.tfrecord_dir, file_pattern, split_name='train')
+    dataset = dataset.shuffle(buffer_size=1000, seed=Hyperparameters.random_seed)
+    dataset = dataset.batch(Hyperparameters.batch_size)
+    dataset = dataset.prefetch(buffer_size=2)
+    iterator = dataset.make_initializable_iterator()
+    batch_of_pairs = iterator.get_next()
+    print(batch_of_pairs)
+    with tf.Session() as sess:
+        sess.run(iterator.initializer)
+        for i in range(5):
+            try:
+                pair_batch = sess.run(batch_of_pairs)
+                anchor = pair_batch['anchor_raw'][0]
+                img = pair_batch['img_raw'][0]
+                label = pair_batch['label'][0]
+                print(label)
+                plt.imshow(anchor.astype(np.uint8))
+                plt.figure()
+                plt.imshow(img.astype(np.uint8))
+                plt.show()
+            except tf.errors.OutOfRangeError:
+                print('End of Epoch')
