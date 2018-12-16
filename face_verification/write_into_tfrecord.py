@@ -1,8 +1,9 @@
 import os
 import tensorflow as tf
 import numpy as np
+import time
 import matplotlib.pyplot as plt
-from PIL import Image
+# from PIL import Image
 
 slim = tf.contrib.slim
 
@@ -322,9 +323,11 @@ def select_random_negative(data_dir, anchor_id, is_training_set):
     negative_example_list = os.listdir(negative_path)
     negative_img = negative_example_list[np.random.randint(len(negative_example_list))]
     negative_img = negative_path + negative_img
-    img = Image.open(negative_img)
-    img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
-    return img
+    # img = Image.open(negative_img)
+    # img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
+    # img_string = open(negative_img).read()
+    img_string = tf.gfile.FastGFile(negative_img, 'rb').read()
+    return img_string
 
 
 def select_all_positive(data_dir, anchor_id, anchor_img):
@@ -335,9 +338,10 @@ def select_all_positive(data_dir, anchor_id, anchor_img):
         if positive_img == anchor_img:
             continue
         positive_img = positive_path + positive_img
-        img = Image.open(positive_img)
-        img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
-        all_positive.append(img)
+        # img = Image.open(positive_img)
+        # img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
+        img_string = open(positive_path, 'rb').read()
+        all_positive.append(img_string)
         # image_string = open(positive_img, 'rb').read()
         # all_positive.append(image_string)
     return all_positive
@@ -360,10 +364,12 @@ def pair_example(anchor_string, img_string, label):
 
 
 def get_image_string(img_path):
-    img = Image.open(img_path)
-    img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
-    with tf.Session() as sess:
-        img_string = sess.run(tf.image.encode_jpeg(img))
+    # img = Image.open(img_path)
+    # img = np.array(img.resize((Hyperparameters.img_height, Hyperparameters.img_width))).astype(np.uint8)
+    # with tf.Session() as sess:
+    #     img_string = sess.run(tf.image.encode_jpeg(img))
+    img_string = open(img_path, 'rb').read()
+    img_string = tf.gfile.FastGFile(img_path, 'rb').read()
     return img_string
 
 
@@ -453,18 +459,31 @@ def write_to_tfrecord(data_dir, train_rate,
     train_person_num = int(train_rate * len(person_list))
     # write train_file
     for i in range(train_person_num):
+        start_t = time.time()
+        print(start_t)
         print('write {}th person\'s face into tf_record. Total: {}'.format(i, train_person_num))
         if i % 300 == 0:
+            if i != 0:
+                writer.close()
             writer = tf.python_io.TFRecordWriter(train_filename + '_' + str(train_file_offset) + '.tfrecord')
             train_file_offset = train_file_offset + 1
         person_id = person_list[i]
         person_path = data_dir + '/' + person_id + '/'
+        print('num: {}'.format(len(os.listdir(person_path))))
         positive_num = 0
         anchor_list = os.listdir(person_path)
+        anchor_num = 0
         for anchor_id in range(len(anchor_list)):
+            if anchor_num > Hyperparameters.max_anchor:
+                break
+            anchor_num = anchor_num + 1
             anchor_string = get_image_string(person_path + anchor_list[anchor_id])
             # search all positive
+            img_num = 0
             for img_id in range(anchor_id + 1, len(anchor_list)):
+                if img_num > Hyperparameters.max_anchor:
+                    break
+                img_num = img_num + 1
                 img_string = get_image_string(person_path + anchor_list[img_id])
                 tf_example = pair_example(anchor_string, img_string, 1)
                 positive_num = positive_num + 1
@@ -475,26 +494,37 @@ def write_to_tfrecord(data_dir, train_rate,
                 negative_img = select_random_negative(data_dir=data_dir,
                                                       anchor_id=anchor_list[anchor_id],
                                                       is_training_set=True)
-                with tf.Session() as sess:
-                    negative_string = sess.run(tf.image.encode_jpeg(negative_img))
-                tf_example = pair_example(anchor_string, negative_string, 0)
+                # with tf.Session() as sess:
+                #     negative_string = sess.run(tf.image.encode_jpeg(negative_img))
+                tf_example = pair_example(anchor_string, negative_img, 0)
                 train_pair_num = train_pair_num + 1
                 writer.write(tf_example.SerializeToString())
-    # write validation file
+    writer.close()
+    write validation file
     for i in range(train_person_num, len(person_list)):
-        print('write {}th person\'s face into tf_record. Total: {}'.format(i, len(person_list)-train_person_num))
-        if i % 300 == 0:
-            writer = tf.python_io.TFRecordWriter(
-                validation_filename + '_' + str(validation_file_offsetoffset) + '.tfrecord')
+        print('write {}th person\'s face into tf_record. Total: {}'.format(i - train_person_num,
+                                                                           len(person_list)-train_person_num))
+        if (i - train_person_num) % 300 == 0:
+            if i - train_person_num != 0:
+                writer.close()
             validation_file_offset = validation_file_offset + 1
+            writer = tf.python_io.TFRecordWriter(validation_filename + '_' + str(validation_file_offset) + '.tfrecord')
         person_id = person_list[i]
         person_path = data_dir + '/' + person_id + '/'
         positive_num = 0
         anchor_list = os.listdir(person_path)
+        anchor_num = 0
         for anchor_id in range(len(anchor_list)):
+            if anchor_num > Hyperparameters.max_anchor:
+                break
+            anchor_num = anchor_num + 1
             anchor_string = get_image_string(person_path + anchor_list[anchor_id])
             # search all positive
+            img_num = 0
             for img_id in range(anchor_id + 1, len(anchor_list)):
+                if img_num > Hyperparameters.max_anchor:
+                    break;
+                img_num = img_num + 1
                 img_string = get_image_string(person_path + anchor_list[img_id])
                 tf_example = pair_example(anchor_string, img_string, 1)
                 positive_num = positive_num + 1
@@ -505,13 +535,14 @@ def write_to_tfrecord(data_dir, train_rate,
                 negative_img = select_random_negative(data_dir=data_dir,
                                                       anchor_id=anchor_list[anchor_id],
                                                       is_training_set=False)
-                with tf.Session() as sess:
-                    negative_string = sess.run(tf.image.encode_jpeg(negative_img))
-                tf_example = pair_example(anchor_string, negative_string, 0)
+                # with tf.Session() as sess:
+                #     negative_string = sess.run(tf.image.encode_jpeg(negative_img))
+                tf_example = pair_example(anchor_string, negative_img, 0)
                 validation_pair_num = validation_pair_num + 1
                 writer.write(tf_example.SerializeToString())
+    writer.close()
+    return train_pair_num, validation_pair_num
 
-    return train_pair_num, validation_pair_num,
 
 
 train_pair_num, validation_pair_num = write_to_tfrecord(data_dir=data_dir,
