@@ -8,7 +8,7 @@ class Hyperparameters:
     data_dir = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/'
     train_filename = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/face_train'
     validation_filename = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/face_validation'
-    tfrecord_dir = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/'
+    tfrecord_dir = './data/'
 
     split_train_rate = 0.8
     img_height = 299

@@ -26,6 +26,9 @@ def _parse_pair_function(example_proto):
                                                        [Hyperparameters.img_height, Hyperparameters.img_width])
     parsed_pair['img_raw'] = tf.image.resize_images(parsed_pair['img_raw'],
                                                     [Hyperparameters.img_height, Hyperparameters.img_width])
+    parsed_pair['anchor_raw'] = tf.image.per_image_standardization(parsed_pair['anchor_raw'])
+    parsed_pair['img_raw'] = tf.image.per_image_standardization(parsed_pair['img_raw'])
+    
     return parsed_pair
 
 
