@@ -2,15 +2,15 @@ import os
 import tensorflow as tf
 from inception_resnet_v2 import inception_resnet_v2, inception_resnet_v2_arg_scope
 from data_preprocessing import *
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from hyperparams import Hyperparameters
-plt.style.use('ggplot')
+# plt.style.use('ggplot')
 slim = tf.contrib.slim
 
 checkpoint_file = tf.train.latest_checkpoint(Hyperparameters.log_dir)
 
-anchor_path = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/4000704/001.jpg'
-img_path = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/4000704/002.jpg'
+anchor_path = '/home/shihaochen/webface/4421617/001.jpg'
+img_path = '/home/shihaochen/webface/4421617/002.jpg'
 
 def distance(E1, E2):
     dis = tf.reduce_sum((E1-E2)**2, -1, keepdims=True)
@@ -62,25 +62,27 @@ def predict(anchor_path, img_path):
         with tf.Session(graph=graph) as sess:
             sess.run(tf.global_variables_initializer())
             try:
-                sess.run(restore_fn(sess))
+                restore_fn(sess)
             except ValueError:
                 print("Can't load model's trained parameters form save_path when it is None.")
             predictions = sess.run(predictions)
             print(predictions)
-        anchor_norm = tf.squeeze(anchor_norm)
-        img_norm = tf.squeeze(img_norm)
-        with tf.Session() as sess:
-            anchor_norm = sess.run(anchor_norm)
-            img_norm = sess.run(img_norm)
+        # anchor_norm = tf.squeeze(anchor_norm)
+        # img_norm = tf.squeeze(img_norm)
+        # with tf.Session() as sess:
+        #     anchor_norm = sess.run(anchor_norm)
+        #     img_norm = sess.run(img_norm)
         # plt.imshow(anchor)
         # plt.figure()
         # plt.imshow(img)
         # plt.figure()
-        plt.imshow(anchor_norm)
-        plt.figure()
-        plt.imshow(img_norm)
-        plt.show()
+        # plt.imshow(anchor_norm)
+        # plt.figure()
+        # plt.imshow(img_norm)
+        # plt.show()
 
 if __name__ == '__main__':
+    print(checkpoint_file)
     predict(anchor_path, img_path)
+
 
