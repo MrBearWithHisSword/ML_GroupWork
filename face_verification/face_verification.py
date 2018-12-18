@@ -24,8 +24,8 @@ def distance(E1, E2):
 def predict(anchor_path, img_path):
     with tf.Graph().as_default() as graph:
         # Read
-        anchor_string = tf.gfile.FastGFile(anchor_path, 'rb').read()
-        img_string = tf.gfile.FastGFile(img_path, 'rb').read()
+        anchor_string = tf.gfile.GFile(anchor_path, 'rb').read()
+        img_string = tf.gfile.GFile(img_path, 'rb').read()
         anchor = tf.image.decode_jpeg(anchor_string, channels=3)
         img = tf.image.decode_jpeg(img_string, channels=3)
         # Resize
@@ -69,10 +69,14 @@ def predict(anchor_path, img_path):
             try:
                 restore_fn(sess)
             except ValueError:
-                print("Can't load model's trained parameters form save_path when it is None.")
+                print("Error: Can't load model's trained parameters form save_path when it is None.")
+                print("If you want to test our model with random initialized params, please delete or note the 76 line of this script.")
+                print("Error: 如果你看到这条信息，说明我们的模型没有被成功加载，请在hyperparams.py中检查log_dir目录下保存的模型或与我联系。"
+                      "如果你只是希望用随机初始化的参数测试模型是否能跑通，请注释掉这个脚本里的第76行（sys.exit())并重新执行。")
+                # sys.exit(3)
             predictions = sess.run(predictions)
             predictions = np.squeeze(predictions)
-            print(predictions)
+            print("the predictions is:{}".format(predictions))
             return predictions
         # anchor_norm = tf.squeeze(anchor_norm)
         # img_norm = tf.squeeze(img_norm)
@@ -108,6 +112,8 @@ def main(argv):
     anchor_path = inputfile[0]
     img_path = inputfile[1]
     # Predict
+    print("your img1_path is: {}".format(anchor_path))
+    print("your img2_path is: {}".format(img_path))
     prediction = predict(anchor_path, img_path)
 
     # Write the answer in to output_file.
@@ -115,8 +121,9 @@ def main(argv):
     # 我们在这里直接将预测的结果追加到输出文件的，这样或许可以让你更方便地批量检查预测结果。
     with open(outputfile, 'a') as f:
         f.write(str(prediction) + '\n')
-    print("Your input file is:{}".format(inputfile))
-    print("the answer if write in :{}".format(outputfile))
+    # print("Your input file is:{}".format(inputfile))
+    print("For your convenience, the answer is written in :{}".format(outputfile))
+    print("为方便您check the answer, 我们已经将结果追加到文件'{}'中去。其中每一行为一次对比的预测结果。".format(outputfile))
 
 
 if __name__ == '__main__':

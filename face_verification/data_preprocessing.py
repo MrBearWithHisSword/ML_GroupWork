@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 from hyperparams import Hyperparameters
-from time import time
+import time
 import numpy as np
 # import matplotlib.pyplot as plt
 
@@ -56,14 +56,14 @@ if __name__ == '__main__':
     batch_num = 0
     with tf.Session() as sess:
         sess.run(iterator.initializer)
-        time_pre = time()
+        time_pre = time.time()
         for i in range(2):
             try:
                 pair_batch = sess.run(batch_of_pairs)
                 # batch_num = batch_num + 1
                 # print(batch_num)
                 # print(batch_num*32)
-                # time_cur = time()
+                # time_cur = time.time()
                 # print('use time: {}'.format(time_cur - time_pre))
                 # time_pre = time_cur
                 # anchor = pair_batch['anchor_raw'][0]
