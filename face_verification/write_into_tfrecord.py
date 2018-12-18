@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import numpy as np
+from tqdm import tqdm
 import time
 import matplotlib.pyplot as plt
 # from PIL import Image
@@ -303,7 +304,7 @@ parsed_image_dataset = raw_image_dataset.map(_parse_image_function)
 
 from hyperparams import Hyperparameters
 
-data_dir = '/home/hcshi/Class_Assignment/01_FaceVerification/webface/'
+# data_dir = Hyperparameters.data_dir
 
 
 def select_random_negative(data_dir, anchor_id, is_training_set):
@@ -442,23 +443,24 @@ def get_image_string(img_path):
 #
 #
 
-train_pair_num = 0
-train_file_offset = 0
-validation_file_offset = 0
-validation_pair_num = 0
+# train_pair_num = 0
+# train_file_offset = 0
+# validation_file_offset = 0
+# validation_pair_num = 0
 train_filename = Hyperparameters.train_filename
 validation_filename = Hyperparameters.validation_filename
 
 
-def write_to_tfrecord(data_dir, train_rate,
-                      train_file_offset=train_file_offset,
-                      validation_file_offset=validation_file_offset,
-                      train_pair_num=train_pair_num,
-                      validation_pair_num=validation_pair_num):
+def write_to_tfrecord(data_dir,
+                      train_rate,
+                      train_file_offset=0,
+                      validation_file_offset=0,
+                      train_pair_num=0,
+                      validation_pair_num=0):
     person_list = os.listdir(data_dir)
     train_person_num = int(train_rate * len(person_list))
     # write train_file
-    for i in range(train_person_num):
+    for i in tqdm(range(train_person_num)):
         start_t = time.time()
         print(start_t)
         print('write {}th person\'s face into tf_record. Total: {}'.format(i, train_person_num))
@@ -500,10 +502,10 @@ def write_to_tfrecord(data_dir, train_rate,
                 train_pair_num = train_pair_num + 1
                 writer.write(tf_example.SerializeToString())
     writer.close()
-    write validation file
-    for i in range(train_person_num, len(person_list)):
-        print('write {}th person\'s face into tf_record. Total: {}'.format(i - train_person_num,
-                                                                           len(person_list)-train_person_num))
+    #write validation file
+    for i in tqdm(range(train_person_num, len(person_list))):
+        # print('write {}th person\'s face into tf_record. Total: {}'.format(i - train_person_num,
+        #                                                                    len(person_list)-train_person_num))
         if (i - train_person_num) % 300 == 0:
             if i - train_person_num != 0:
                 writer.close()
@@ -545,12 +547,12 @@ def write_to_tfrecord(data_dir, train_rate,
 
 
 
-train_pair_num, validation_pair_num = write_to_tfrecord(data_dir=data_dir,
+train_pair_num, validation_pair_num = write_to_tfrecord(data_dir=Hyperparameters.data_dir,
                                                         train_rate=Hyperparameters.split_train_rate,
-                                                        train_file_offset=train_file_offset,
-                                                        validation_file_offset=validation_file_offset,
-                                                        train_pair_num=train_pair_num,
-                                                        validation_pair_num=validation_pair_num)
+                                                        train_file_offset=0,
+                                                        validation_file_offset=0,
+                                                        train_pair_num=0,
+                                                        validation_pair_num=0)
 
 print('Finished.')
 print('train_pair_num: {} \nvalidation_pair_num: {}'.format(train_pair_num, validation_pair_num))

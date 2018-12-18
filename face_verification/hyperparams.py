@@ -10,7 +10,7 @@ class Hyperparameters:
     validation_filename = '/home/hcshi/Class_Assignment/01_FaceVerification/code/inception_res_v2/data/face_validation'
     tfrecord_dir = './data/'
 
-    split_train_rate = 0.8
+    split_train_rate = 0.8  # How many data is used for training.
     img_height = 299
     img_width = 299
     train_pair_num = 0

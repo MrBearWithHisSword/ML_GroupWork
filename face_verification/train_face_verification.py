@@ -24,7 +24,7 @@ checkpoint_file = Hyperparameters.checkpoint_file
 items_to_descriptions = {
     'anchor': 'A 3-channel RGB colored face image.',
     'img': 'Another 3-channel RGB colored face image.',
-    'label': 'Wheter the anchor and img are the same person\'s face'
+    'label': '这两张人脸是否属于同一个人，若是则为1，否则为0'
 }
 
 #===============Data Loading====================
@@ -130,7 +130,8 @@ def run():
 
         # Run the managed session
         with sv.managed_session() as sess:
-            for epoch in tqdm(range(Hyperparameters.epoch_num)):
+            # for epoch in tqdm(range(Hyperparameters.epoch_num)):
+            for epoch in tqdm(range(1)):
                 # At the start of every epoch, show the vital information:
                 sess.run(iterator.initializer)
                 logging.info('Epoch %s/%s', epoch, Hyperparameters.epoch_num)
@@ -138,7 +139,8 @@ def run():
                 logging.info('Current Learning Rate: %s', learning_rate_value)
                 logging.info('Current Streaming Accuracy: %s', accuracy_value)
                 # Log the summaries every 10 step.
-                for step in tqdm(range(Hyperparameters.num_batchs_per_train_epoch)):
+                # for step in tqdm(range(Hyperparameters.num_batchs_per_train_epoch)):
+                for step in tqdm(range(1)):
                     if step % 10 == 0:
                         loss, _ = train_step(sess, train_op, sv.global_step)
                         summaries = sess.run(my_summary_op)
@@ -146,16 +148,14 @@ def run():
                     # If not, simply run the training step
                     else:
                         loss, _ = train_step(sess, train_op, sv.global_step)
-                # Save every epoch
-                sv.saver.save(sess, sv.save_path, global_step=sv.global_step)
             # We log the final training loss and accuracy
             logging.info('Final Loss: %s', loss)
             logging.info('Final Accuracy: %s', sess.run(accuracy))
 
             # Once all the training has been done, save the log files and checkpoint model
             logging.info('Finished training! Saving model to disk now.')
-            # Save final model.
-            # sv.saver.save(sess, sv.save_path, global_step=sv.global_step)
+            # saver.save(sess, "./flowers_model.ckpt")
+            sv.saver.save(sess, sv.save_path, global_step=sv.global_step)
 
 
 if __name__ == '__main__':
