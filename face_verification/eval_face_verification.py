@@ -99,8 +99,9 @@ def run():
         # Get  supervisor
         sv = tf.train.Supervisor(logdir=log_eval, summary_op=None, saver=None, init_fn=restore_fn)
         # Run the session
-        with tf.Session() as sess:
+        with sv.managed_session() as sess:
             for epoch in tqdm(range(Hyperparameters.eval_epoch_num)):
+                sess.run(iterator.initializer)
                 logging.info('Epoch: %s/%s', epoch, Hyperparameters.eval_epoch_num)
                 logging.info('Current Streaming Accuracy: %.4f', sess.run(accuracy))
                 for step in tqdm(range(Hyperparameters.num_batchs_per_eval_epoch)):

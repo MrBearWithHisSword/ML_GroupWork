@@ -1,7 +1,10 @@
 import os
+import sys
+import getopt
 import tensorflow as tf
 from inception_resnet_v2 import inception_resnet_v2, inception_resnet_v2_arg_scope
 from data_preprocessing import *
+import numpy as np
 # import matplotlib.pyplot as plt
 from hyperparams import Hyperparameters
 # plt.style.use('ggplot')
@@ -9,12 +12,14 @@ slim = tf.contrib.slim
 
 checkpoint_file = tf.train.latest_checkpoint(Hyperparameters.log_dir)
 
-anchor_path = '/home/shihaochen/webface/4421617/001.jpg'
-img_path = '/home/shihaochen/webface/4421617/002.jpg'
+# anchor_path = '/home/shihaochen/webface/4421617/001.jpg'
+# img_path = '/home/shihaochen/webface/4421617/002.jpg'
+
 
 def distance(E1, E2):
     dis = tf.reduce_sum((E1-E2)**2, -1, keepdims=True)
     return dis
+
 
 def predict(anchor_path, img_path):
     with tf.Graph().as_default() as graph:
@@ -66,7 +71,9 @@ def predict(anchor_path, img_path):
             except ValueError:
                 print("Can't load model's trained parameters form save_path when it is None.")
             predictions = sess.run(predictions)
+            predictions = np.squeeze(predictions)
             print(predictions)
+            return predictions
         # anchor_norm = tf.squeeze(anchor_norm)
         # img_norm = tf.squeeze(img_norm)
         # with tf.Session() as sess:
@@ -81,8 +88,39 @@ def predict(anchor_path, img_path):
         # plt.imshow(img_norm)
         # plt.show()
 
+
+# Using getopt module
+def main(argv):
+    inputfile = []
+    outputfile = ''
+    preds = int(0)
+    # Check file_path & Get the two img.
+    try:
+        opts, args = getopt.getopt(argv, "i:o:")
+    except getopt.GetoptError:
+        print("You should run command in shell like: python <this file's name>  -i <img_1> -i <img_2> -o <output_file>")
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-i':
+            inputfile.append(arg)
+        elif opt == '-o':
+            outputfile = arg
+    anchor_path = inputfile[0]
+    img_path = inputfile[1]
+    # Predict
+    prediction = predict(anchor_path, img_path)
+
+    # Write the answer in to output_file.
+    # Here we add the answer to the end of the file, for your convenience to check the result.
+    # 我们在这里直接将预测的结果追加到输出文件的，这样或许可以让你更方便地批量检查预测结果。
+    with open(outputfile, 'a') as f:
+        f.write(str(prediction) + '\n')
+    print("Your input file is:{}".format(inputfile))
+    print("the answer if write in :{}".format(outputfile))
+
+
 if __name__ == '__main__':
-    print(checkpoint_file)
-    predict(anchor_path, img_path)
+    # print(checkpoint_file)
+    main(sys.argv[1:])
 
 
